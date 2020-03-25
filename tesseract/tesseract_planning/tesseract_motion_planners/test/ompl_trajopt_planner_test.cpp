@@ -68,6 +68,7 @@ const static int SEED = 1;
 const static std::vector<double> start_state = { -0.5, 0.5, 0.0, -1.3348, 0.0, 1.4959, 0.0 };
 const static std::vector<double> end_state = { 0.5, 0.5, 0.0, -1.3348, 0.0, 1.4959, 0.0 };
 const static bool PLANNER_VERBOSE = true;
+const static PostPlanCheckType PLANNER_COLLISION_CHECK_TYPE = PostPlanCheckType::DISCRETE_CONTINUOUS_COLLISION;
 
 std::string locateResource(const std::string& url)
 {
@@ -182,11 +183,13 @@ public:
       trajopt_config->collision_cost_config.enabled = false;
       trajopt_config->collision_constraint_config.enabled = true;
       trajopt_config->collision_constraint_config.safety_margin = 0.02;
-      trajopt_config->collision_constraint_config.type = trajopt::CollisionEvaluatorType::CAST_CONTINUOUS;
+      trajopt_config->collision_constraint_config.coeff = 20;
+      trajopt_config->collision_constraint_config.type = trajopt::CollisionEvaluatorType::SINGLE_TIMESTEP;
       trajopt_config->smooth_velocities = true;
       trajopt_config->smooth_jerks = true;
       trajopt_config->smooth_accelerations = true;
-      trajopt_config->acceleration_coeff = 0.1 * Eigen::VectorXd::Ones(kin->numJoints());
+      trajopt_config->velocity_coeff = 0.1 * Eigen::VectorXd::Ones(kin->numJoints());
+      trajopt_config->optimizer = sco::ModelType::BPMPD;
 
       trajopt_config->num_steps = 50;
     }
@@ -201,6 +204,7 @@ public:
     if (!status)
     {
       CONSOLE_BRIDGE_logError("CI Error: %s - %s", status.category()->name().c_str(), status.message().c_str());
+      std::cout << planning_response.joint_trajectory.trajectory.matrix() << std::endl;
     }
     EXPECT_TRUE(status);
 
@@ -219,9 +223,9 @@ public:
 
 using Implementations = ::testing::Types<tesseract_motion_planners::SBLConfigurator,
                                          // tesseract_motion_planners::ESTConfigurator,
-                                         // tesseract_motion_planners::LBKPIECE1Configurator,
-                                         // tesseract_motion_planners::BKPIECE1Configurator,
-                                         // tesseract_motion_planners::KPIECE1Configurator,
+                                         tesseract_motion_planners::LBKPIECE1Configurator,
+                                         tesseract_motion_planners::BKPIECE1Configurator,
+                                         tesseract_motion_planners::KPIECE1Configurator,
                                          // tesseract_motion_planners::RRTConfigurator,
                                          // tesseract_motion_planners::RRTstarConfigurator,
                                          // tesseract_motion_planners::TRRTConfigurator,
