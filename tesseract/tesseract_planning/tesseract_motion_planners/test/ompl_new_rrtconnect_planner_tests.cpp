@@ -35,12 +35,15 @@ TESSERACT_COMMON_IGNORE_WARNINGS_PUSH
 #include <gtest/gtest.h>
 TESSERACT_COMMON_IGNORE_WARNINGS_POP
 
+#include "ompl/base/Constraint.h"
+
 #include <tesseract/tesseract.h>
 #include <tesseract_environment/core/utils.h>
 #include <tesseract_motion_planners/ompl/ompl_motion_planner.h>
 #include <tesseract_motion_planners/ompl/ompl_planner_configurator.h>
 #include <tesseract_motion_planners/ompl/config/ompl_planner_freespace_config.h>
 #include <tesseract_motion_planners/ompl/new_RRTConnect_planner.h>
+#include <tesseract_motion_planners/ompl/utils.h>
 
 using namespace tesseract;
 using namespace tesseract_scene_graph;
@@ -123,17 +126,17 @@ public:
 
     out[0] = std::atan2(z_axis.cross(normal_).norm(), z_axis.dot(normal_));
   }
-  
+
   bool project(ompl::base::State *state) const override
   {
      Eigen::Map<Eigen::VectorXd> s = extractor_(state);
-     return project(s);
+     return ompl::base::Constraint::project(s);
   }
 
 private:
   Eigen::Vector3d normal_;
-  OMPLStateExtractor extractor_;
   tesseract_kinematics::ForwardKinematics::Ptr fwd_kin_;
+  OMPLStateExtractor extractor_;
 };
 
 
@@ -161,7 +164,9 @@ TEST(OMPLNewConstraintPlanner, OMPLNewConstraintPlannerUnit)
 
   Eigen::Vector3d normal = -1.0 * Eigen::Vector3d::UnitZ();
   auto new_configurator = std::make_shared<tesseract_motion_planners::NewRRTConnectConfigurator>();
-  new_configurator->constraint = std::make_shared<GlassUprightConstraint>(normal, kin);
+  OMPLStateExtractor extractor;
+  extractor = tesseract_motion_planners::ConstrainedStateSpaceExtractor;
+  new_configurator->constraint = std::make_shared<GlassUprightConstraint>(normal, kin, extractor);
   // This will create two planners of the same type and run them in different threads
   std::vector<tesseract_motion_planners::OMPLPlannerConfigurator::ConstPtr> planners;
   planners.push_back(new_configurator);
