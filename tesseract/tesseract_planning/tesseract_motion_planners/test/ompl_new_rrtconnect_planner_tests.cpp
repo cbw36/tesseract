@@ -107,8 +107,8 @@ static void addBox(tesseract_environment::Environment& env)
 class GlassUprightConstraint : public ompl::base::Constraint
 {
 public:
-  GlassUprightConstraint(const Eigen::Vector3d& normal, tesseract_kinematics::ForwardKinematics::Ptr fwd_kin)
-    : ompl::base::Constraint(fwd_kin->numJoints(), 1), normal_(normal.normalized()), fwd_kin_(std::move(fwd_kin))
+  GlassUprightConstraint(const Eigen::Vector3d& normal, tesseract_kinematics::ForwardKinematics::Ptr fwd_kin, OMPLStateExtractor extractor)
+    : ompl::base::Constraint(fwd_kin->numJoints(), 1), normal_(normal.normalized()), fwd_kin_(std::move(fwd_kin)), extractor_(std::move(extractor))
   {
   }
 
@@ -123,9 +123,16 @@ public:
 
     out[0] = std::atan2(z_axis.cross(normal_).norm(), z_axis.dot(normal_));
   }
+  
+  bool project(ompl::base::State *state) const override
+  {
+     Eigen::Map<Eigen::VectorXd> s = extractor_(state);
+     return project(s);
+  }
 
 private:
   Eigen::Vector3d normal_;
+  OMPLStateExtractor extractor_;
   tesseract_kinematics::ForwardKinematics::Ptr fwd_kin_;
 };
 
