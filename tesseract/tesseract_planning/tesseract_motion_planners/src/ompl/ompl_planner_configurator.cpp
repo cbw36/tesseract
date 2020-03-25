@@ -41,6 +41,7 @@ TESSERACT_COMMON_IGNORE_WARNINGS_PUSH
 #include <ompl/geometric/planners/prm/SPARS.h>
 TESSERACT_COMMON_IGNORE_WARNINGS_POP
 #include <tesseract_motion_planners/ompl/ompl_planner_configurator.h>
+#include <tesseract_motion_planners/ompl/new_RRTConnect_planner.h>
 
 namespace tesseract_motion_planners
 {
@@ -101,6 +102,14 @@ ompl::base::PlannerPtr RRTConnectConfigurator::create(ompl::base::SpaceInformati
 {
   auto planner = std::make_shared<ompl::geometric::RRTConnect>(si);
   planner->setRange(range);
+  return planner;
+}
+
+ompl::base::PlannerPtr NewRRTConnectConfigurator::create(ompl::base::SpaceInformationPtr si) const
+{
+  auto planner = std::make_shared<tesseract_motion_planners::RRTConnect>(si);
+  planner->setRange(range);
+  planner->setConstraint(constraint);
   return planner;
 }
 

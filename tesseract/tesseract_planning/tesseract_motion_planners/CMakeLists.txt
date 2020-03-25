@@ -52,7 +52,8 @@ set(OMPL_SRC src/ompl/ompl_motion_planner.cpp
   src/ompl/config/ompl_planner_freespace_config.cpp
   src/ompl/utils.cpp
   src/ompl/state_collision_validator.cpp
-  src/ompl/compound_state_validator.cpp)
+  src/ompl/compound_state_validator.cpp
+  src/ompl/new_RRTConnect_planner.cpp)
 
 if(NOT OMPL_VERSION VERSION_LESS "1.4.0")
   list(APPEND OMPL_SRC src/ompl/config/ompl_planner_constrained_config.cpp)
@@ -79,6 +80,7 @@ endif()
 target_include_directories(${PROJECT_NAME}_ompl_trajopt_freespace PUBLIC
     "$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>"
     "$<INSTALL_INTERFACE:include>")
+
 
 # Descartes Planner
 add_library(${PROJECT_NAME}_descartes SHARED

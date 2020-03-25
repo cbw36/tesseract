@@ -36,6 +36,8 @@
 TESSERACT_COMMON_IGNORE_WARNINGS_PUSH
 #include <ompl/base/SpaceInformation.h>
 #include <ompl/base/Planner.h>
+#include <ompl/base/Constraint.h>
+
 TESSERACT_COMMON_IGNORE_WARNINGS_POP
 
 namespace tesseract_motion_planners
@@ -146,6 +148,17 @@ struct RRTConnectConfigurator : public OMPLPlannerConfigurator
 {
   /** @brief Max motion added to tree */
   double range = 0;
+
+  /** @brief Create the planner */
+  ompl::base::PlannerPtr create(ompl::base::SpaceInformationPtr si) const override;
+};
+
+struct NewRRTConnectConfigurator : public OMPLPlannerConfigurator
+{
+  /** @brief Max motion added to tree */
+  double range = 0;
+
+  ompl::base::ConstraintPtr constraint{ nullptr };
 
   /** @brief Create the planner */
   ompl::base::PlannerPtr create(ompl::base::SpaceInformationPtr si) const override;
