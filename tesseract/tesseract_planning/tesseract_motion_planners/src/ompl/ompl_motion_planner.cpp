@@ -126,27 +126,27 @@ tesseract_common::StatusCode OMPLMotionPlanner::solve(PlannerResponse& response,
     return response.status;
   }
 
-  if (config_->simplify)
-  {
-    config_->simple_setup->simplifySolution();
-  }
-  else
-  {
-    // Interpolate the path if it shouldn't be simplified and there are currently fewer states than requested
-    auto num_output_states = static_cast<unsigned>(config_->n_output_states);
-    if (config_->simple_setup->getSolutionPath().getStateCount() < num_output_states)
-    {
-      config_->simple_setup->getSolutionPath().interpolate(num_output_states);
-    }
-    else
-    {
-      // Now try to simplify the trajectory to get it under the requested number of output states
-      // The interpolate function only executes if the current number of states is less than the requested
-      config_->simple_setup->simplifySolution();
-      if (config_->simple_setup->getSolutionPath().getStateCount() < num_output_states)
-        config_->simple_setup->getSolutionPath().interpolate(num_output_states);
-    }
-  }
+//  if (config_->simplify)
+//  {
+//    config_->simple_setup->simplifySolution();
+//  }
+//  else
+//  {
+//    // Interpolate the path if it shouldn't be simplified and there are currently fewer states than requested
+//    auto num_output_states = static_cast<unsigned>(config_->n_output_states);
+//    if (config_->simple_setup->getSolutionPath().getStateCount() < num_output_states)
+//    {
+//      config_->simple_setup->getSolutionPath().interpolate(num_output_states);
+//    }
+//    else
+//    {
+//      // Now try to simplify the trajectory to get it under the requested number of output states
+//      // The interpolate function only executes if the current number of states is less than the requested
+//      config_->simple_setup->simplifySolution();
+//      if (config_->simple_setup->getSolutionPath().getStateCount() < num_output_states)
+//        config_->simple_setup->getSolutionPath().interpolate(num_output_states);
+//    }
+//  }
 
   tesseract_common::TrajArray traj = config_->getTrajectory();
 
@@ -160,28 +160,28 @@ tesseract_common::StatusCode OMPLMotionPlanner::solve(PlannerResponse& response,
           .transpose()
           .isApprox(traj.bottomRows(1), 1e-5));
 
-  // Check and report collisions
-  continuous_contact_manager_->setContactDistanceThreshold(0.0);
+//  // Check and report collisions
+//  continuous_contact_manager_->setContactDistanceThreshold(0.0);
 
   bool valid = true;
-  {
-    auto env = config_->tesseract->getEnvironmentConst();
-    auto adj_map = std::make_shared<tesseract_environment::AdjacencyMap>(
-        env->getSceneGraph(), kin_->getActiveLinkNames(), env->getCurrentState()->transforms);
-    auto discrete_contact_manager = env->getDiscreteContactManager();
-    discrete_contact_manager->setActiveCollisionObjects(adj_map->getActiveLinkNames());
-    discrete_contact_manager->setContactDistanceThreshold(0.0);
+//  {
+//    auto env = config_->tesseract->getEnvironmentConst();
+//    auto adj_map = std::make_shared<tesseract_environment::AdjacencyMap>(
+//        env->getSceneGraph(), kin_->getActiveLinkNames(), env->getCurrentState()->transforms);
+//    auto discrete_contact_manager = env->getDiscreteContactManager();
+//    discrete_contact_manager->setActiveCollisionObjects(adj_map->getActiveLinkNames());
+//    discrete_contact_manager->setContactDistanceThreshold(0.0);
 
-    tesseract_environment::StateSolver::Ptr state_solver = env->getStateSolver();
+//    tesseract_environment::StateSolver::Ptr state_solver = env->getStateSolver();
 
-    validator_ = std::make_shared<TrajectoryValidator>(
-        continuous_contact_manager_, discrete_contact_manager, config_->longest_valid_segment_length, verbose);
-    valid = validator_->trajectoryValid(traj, check_type, *state_solver, kin_->getJointNames());
-  }
+//    validator_ = std::make_shared<TrajectoryValidator>(
+//        continuous_contact_manager_, discrete_contact_manager, config_->longest_valid_segment_length, verbose);
+//    valid = validator_->trajectoryValid(traj, check_type, *state_solver, kin_->getJointNames());
+//  }
 
-  // Set the contact distance back to original incase solve was called again.
-  continuous_contact_manager_->setContactDistanceThreshold(config_->collision_safety_margin);
-
+//  // Set the contact distance back to original incase solve was called again.
+//  continuous_contact_manager_->setContactDistanceThreshold(config_->collision_safety_margin);
+  UNUSED(check_type);
   // Send response
   response.joint_trajectory.trajectory = traj;
   response.joint_trajectory.joint_names = kin_->getJointNames();

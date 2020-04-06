@@ -40,6 +40,8 @@
 #include "ompl/datastructures/NearestNeighbors.h"
 #include "ompl/geometric/planners/PlannerIncludes.h"
 #include <ompl/base/Constraint.h>
+#include <string>
+#include <iostream>
 
 namespace tesseract_motion_planners
 {
