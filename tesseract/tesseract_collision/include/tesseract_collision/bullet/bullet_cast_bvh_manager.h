@@ -38,12 +38,12 @@
  * ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
  */
+#ifndef TESSERACT_COLLISION_BULLET_CAST_BVH_MANAGERS_H
+#define TESSERACT_COLLISION_BULLET_CAST_BVH_MANAGERS_H
 
 #include <tesseract_collision/bullet/bullet_utils.h>
 #include <tesseract_collision/core/continuous_contact_manager.h>
-
-#ifndef TESSERACT_COLLISION_BULLET_CAST_BVH_MANAGERS_H
-#define TESSERACT_COLLISION_BULLET_CAST_BVH_MANAGERS_H
+#include <tesseract_collision/bullet/tesseract_collision_configuration.h>
 
 namespace tesseract_collision
 {
@@ -105,6 +105,8 @@ public:
   void setCollisionObjectsTransform(const tesseract_common::TransformMap& pose1,
                                     const tesseract_common::TransformMap& pose2) override;
 
+  const std::vector<std::string>& getCollisionObjects() const override;
+
   void setActiveCollisionObjects(const std::vector<std::string>& names) override;
 
   const std::vector<std::string>& getActiveCollisionObjects() const override;
@@ -126,24 +128,22 @@ public:
   void addCollisionObject(const COW::Ptr& cow);
 
 private:
-  std::vector<std::string> active_; /**< @brief A list of the active collision objects */
-  double contact_distance_;         /**< @brief The contact distance threshold */
-  IsContactAllowedFn fn_;           /**< @brief The is allowed collision function */
+  std::vector<std::string> active_;            /**< @brief A list of the active collision objects */
+  std::vector<std::string> collision_objects_; /**< @brief A list of the collision objects */
 
   std::unique_ptr<btCollisionDispatcher> dispatcher_; /**< @brief The bullet collision dispatcher used for getting
                                                          object to object collison algorithm */
   btDispatcherInfo dispatch_info_;              /**< @brief The bullet collision dispatcher configuration information */
-  btDefaultCollisionConfiguration coll_config_; /**< @brief The bullet collision configuration */
+  TesseractCollisionConfiguration coll_config_; /**< @brief The bullet collision configuration */
   std::unique_ptr<btBroadphaseInterface> broadphase_; /**< @brief The bullet broadphase interface */
   Link2Cow link2cow_;                                 /**< @brief A map of collision objects being managed */
   Link2Cow link2castcow_;                             /**< @brief A map of cast collision objects being managed. */
 
   /**
-   * @brief Perform a contact test for the provided object which is not part of the manager
-   * @param cow The Collision object
-   * @param collisions The collision results
+   * @brief This is used when contactTest is called. It is also added as a user point to the collsion objects
+   * so it can be used to exit collision checking for compound shapes.
    */
-  void contactTest(const COW::Ptr& cow, ContactTestData& collisions);
+  ContactTestData contact_test_data_;
 };
 }  // namespace tesseract_collision_bullet
 }  // namespace tesseract_collision

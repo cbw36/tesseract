@@ -243,14 +243,6 @@ public:
     return (vec.dot(sv0) > vec.dot(sv1)) ? sv0 : sv1;
   }
 
-  // notice that the vectors should be unit length
-  void batchedUnitVectorGetSupportingVertexWithoutMargin(const btVector3* /*vectors*/,
-                                                         btVector3* /*supportVerticesOut*/,
-                                                         int /*numVectors*/) const override
-  {
-    throw std::runtime_error("not implemented");
-  }
-
   /// getAabb's default implementation is brute force, expected derived classes to implement a fast dedicated version
   void getAabb(const btTransform& t_w0, btVector3& aabbMin, btVector3& aabbMax) const override
   {
@@ -261,12 +253,37 @@ public:
     aabbMax.setMax(max1);
   }
 
-  void getAabbSlow(const btTransform& /*t*/, btVector3& /*aabbMin*/, btVector3& /*aabbMax*/) const override
+  const char* getName() const override { return "CastHull"; }
+  btVector3 localGetSupportingVertexWithoutMargin(const btVector3& v) const override
   {
-    throw std::runtime_error("shouldn't happen");
+    return localGetSupportingVertex(v);
   }
 
-  void setLocalScaling(const btVector3& /*scaling*/) override {}
+  // LCOV_EXCL_START
+  // notice that the vectors should be unit length
+  void batchedUnitVectorGetSupportingVertexWithoutMargin(const btVector3* /*vectors*/,
+                                                         btVector3* /*supportVerticesOut*/,
+                                                         int /*numVectors*/) const override
+  {
+    throw std::runtime_error("If you are seeing this error message then something in Bullet must have changed. Attach "
+                             "a debugger and inspect the call stack to find the function in Bullet calling this "
+                             "function, then review commit history to determine what change.");
+  }
+
+  void getAabbSlow(const btTransform& /*t*/, btVector3& /*aabbMin*/, btVector3& /*aabbMax*/) const override
+  {
+    throw std::runtime_error("If you are seeing this error message then something in Bullet must have changed. Attach "
+                             "a debugger and inspect the call stack to find the function in Bullet calling this "
+                             "function, then review commit history to determine what change.");
+  }
+
+  void setLocalScaling(const btVector3& /*scaling*/) override
+  {
+    throw std::runtime_error("If you are seeing this error message then something in Bullet must have changed. Attach "
+                             "a debugger and inspect the call stack to find the function in Bullet calling this "
+                             "function, then review commit history to determine what change.");
+  }
+
   const btVector3& getLocalScaling() const override
   {
     static btVector3 out(1, 1, 1);
@@ -274,19 +291,25 @@ public:
   }
 
   void setMargin(btScalar /*margin*/) override {}
+
   btScalar getMargin() const override { return 0; }
+
   int getNumPreferredPenetrationDirections() const override { return 0; }
+
   void getPreferredPenetrationDirection(int /*index*/, btVector3& /*penetrationVector*/) const override
   {
-    throw std::runtime_error("not implemented");
+    throw std::runtime_error("If you are seeing this error message then something in Bullet must have changed. Attach "
+                             "a debugger and inspect the call stack to find the function in Bullet calling this "
+                             "function, then review commit history to determine what change.");
   }
 
-  void calculateLocalInertia(btScalar, btVector3&) const override { throw std::runtime_error("not implemented"); }
-  const char* getName() const override { return "CastHull"; }
-  btVector3 localGetSupportingVertexWithoutMargin(const btVector3& v) const override
+  void calculateLocalInertia(btScalar, btVector3&) const override
   {
-    return localGetSupportingVertex(v);
+    throw std::runtime_error("If you are seeing this error message then something in Bullet must have changed. Attach "
+                             "a debugger and inspect the call stack to find the function in Bullet calling this "
+                             "function, then review commit history to determine what change.");
   }
+  // LCOV_EXCL_STOP
 };
 
 inline void
@@ -383,8 +406,8 @@ inline btScalar addDiscreteSingleResult(btManifoldPoint& cp,
 
   ObjectPairKey pc = getObjectPairKey(cd0->getName(), cd1->getName());
 
-  const auto& it = collisions.res.find(pc);
-  bool found = (it != collisions.res.end());
+  const auto& it = collisions.res->find(pc);
+  bool found = (it != collisions.res->end());
 
   //    size_t l = 0;
   //    if (found)
@@ -476,13 +499,17 @@ inline void calculateContinuousData(ContactResult* col,
   // TODO: this section is potentially problematic. think hard about the math
   if (shape_sup0 - shape_sup1 > BULLET_SUPPORT_FUNC_TOLERANCE)
   {
+    // LCOV_EXCL_START
     col->cc_time[link_index] = 0;
     col->cc_type[link_index] = ContinuousCollisionType::CCType_Time0;
+    // LCOV_EXCL_STOP
   }
   else if (shape_sup1 - shape_sup0 > BULLET_SUPPORT_FUNC_TOLERANCE)
   {
+    // LCOV_EXCL_START
     col->cc_time[link_index] = 1;
     col->cc_type[link_index] = ContinuousCollisionType::CCType_Time1;
+    // LCOV_EXCL_STOP
   }
   else
   {
@@ -497,7 +524,7 @@ inline void calculateContinuousData(ContactResult* col,
 
     if (l0c + l1c < BULLET_LENGTH_TOLERANCE)
     {
-      col->cc_time[link_index] = .5;
+      col->cc_time[link_index] = .5;  // LCOV_EXCL_LINE
     }
     else
     {
@@ -522,8 +549,8 @@ inline btScalar addCastSingleResult(btManifoldPoint& cp,
                                                       std::make_pair(cd0->getName(), cd1->getName()) :
                                                       std::make_pair(cd1->getName(), cd0->getName());
 
-  auto it = collisions.res.find(pc);
-  bool found = it != collisions.res.end();
+  auto it = collisions.res->find(pc);
+  bool found = it != collisions.res->end();
 
   //    size_t l = 0;
   //    if (found)
@@ -558,9 +585,7 @@ inline btScalar addCastSingleResult(btManifoldPoint& cp,
 
   ContactResult* col = processResult(collisions, contact, pc, found);
   if (!col)
-  {
     return 0;
-  }
 
   if (cd0->m_collisionFilterGroup == btBroadphaseProxy::KinematicFilter &&
       cd1->m_collisionFilterGroup == btBroadphaseProxy::KinematicFilter)
@@ -783,66 +808,6 @@ struct TesseractBroadphaseBridgedManifoldResult : public btManifoldResult
     const btCollisionObjectWrapper* obj1Wrap = isSwapped ? m_body0Wrap : m_body1Wrap;
     result_callback_.addSingleResult(
         newPt, obj0Wrap, newPt.m_partId0, newPt.m_index0, obj1Wrap, newPt.m_partId1, newPt.m_index1);
-  }
-};
-
-/**
- * @brief This is copied directly out of BulletWorld
- *
- * This is currently not used but will remain because it is needed
- * to check a collision object not in the broadphase to the broadphase
- * which may eventually be exposed.
- */
-struct TesseractSingleContactCallback : public btBroadphaseAabbCallback
-{
-  btCollisionObject* m_collisionObject;    /**< @brief The bullet collision object */
-  btCollisionDispatcher* m_dispatcher;     /**< @brief The bullet collision dispatcher used for getting object to object
-                                              collison algorithm */
-  const btDispatcherInfo& m_dispatch_info; /**< @brief The bullet collision dispatcher configuration information */
-  btCollisionWorld::ContactResultCallback& m_resultCallback;
-
-  TesseractSingleContactCallback(btCollisionObject* collisionObject,
-                                 btCollisionDispatcher* dispatcher,
-                                 const btDispatcherInfo& dispatch_info,
-                                 btCollisionWorld::ContactResultCallback& resultCallback)
-    : m_collisionObject(collisionObject)
-    , m_dispatcher(dispatcher)
-    , m_dispatch_info(dispatch_info)
-    , m_resultCallback(resultCallback)
-  {
-  }
-
-  bool process(const btBroadphaseProxy* proxy) override
-  {
-    auto* collisionObject = static_cast<btCollisionObject*>(proxy->m_clientObject);
-    if (collisionObject == m_collisionObject)
-      return true;
-
-    if (m_resultCallback.needsCollision(collisionObject->getBroadphaseHandle()))
-    {
-      btCollisionObjectWrapper ob0(nullptr,
-                                   m_collisionObject->getCollisionShape(),
-                                   m_collisionObject,
-                                   m_collisionObject->getWorldTransform(),
-                                   -1,
-                                   -1);
-      btCollisionObjectWrapper ob1(
-          nullptr, collisionObject->getCollisionShape(), collisionObject, collisionObject->getWorldTransform(), -1, -1);
-
-      btCollisionAlgorithm* algorithm = m_dispatcher->findAlgorithm(&ob0, &ob1, nullptr, BT_CLOSEST_POINT_ALGORITHMS);
-      if (algorithm)
-      {
-        TesseractBridgedManifoldResult contactPointResult(&ob0, &ob1, m_resultCallback);
-        contactPointResult.m_closestPointDistanceThreshold = m_resultCallback.m_closestDistanceThreshold;
-
-        // discrete collision detection query
-        algorithm->processCollision(&ob0, &ob1, m_dispatch_info, &contactPointResult);
-
-        algorithm->~btCollisionAlgorithm();
-        m_dispatcher->freeCollisionAlgorithm(algorithm);
-      }
-    }
-    return true;
   }
 };
 

@@ -62,7 +62,7 @@ BulletCastBVHManager::BulletCastBVHManager()
 
   broadphase_ = std::make_unique<btDbvtBroadphase>();
 
-  contact_distance_ = 0;
+  contact_test_data_.contact_distance = 0;
 }
 
 BulletCastBVHManager::~BulletCastBVHManager()
@@ -89,13 +89,13 @@ ContinuousContactManager::Ptr BulletCastBVHManager::clone() const
 
     new_cow->setWorldTransform(cow.second->getWorldTransform());
 
-    new_cow->setContactProcessingThreshold(static_cast<btScalar>(contact_distance_));
+    new_cow->setContactProcessingThreshold(static_cast<btScalar>(contact_test_data_.contact_distance));
     manager->addCollisionObject(new_cow);
   }
 
   manager->setActiveCollisionObjects(active_);
-  manager->setContactDistanceThreshold(contact_distance_);
-  manager->setIsContactAllowedFn(fn_);
+  manager->setContactDistanceThreshold(contact_test_data_.contact_distance);
+  manager->setIsContactAllowedFn(contact_test_data_.fn);
 
   return std::move(manager);
 }
@@ -142,6 +142,7 @@ bool BulletCastBVHManager::removeCollisionObject(const std::string& name)
   if (it != link2cow_.end())
   {
     COW::Ptr& cow1 = it->second;
+    collision_objects_.erase(std::find(collision_objects_.begin(), collision_objects_.end(), name));
     removeCollisionObjectFromBroadphase(cow1, broadphase_, dispatcher_);
     link2cow_.erase(name);
 
@@ -312,9 +313,12 @@ void BulletCastBVHManager::setCollisionObjectsTransform(const tesseract_common::
   }
 }
 
+const std::vector<std::string>& BulletCastBVHManager::getCollisionObjects() const { return collision_objects_; }
+
 void BulletCastBVHManager::setActiveCollisionObjects(const std::vector<std::string>& names)
 {
   active_ = names;
+  contact_test_data_.active = &active_;
 
   // Now need to update the broadphase with correct aabb
   for (auto& co : link2cow_)
@@ -370,7 +374,7 @@ void BulletCastBVHManager::setActiveCollisionObjects(const std::vector<std::stri
 const std::vector<std::string>& BulletCastBVHManager::getActiveCollisionObjects() const { return active_; }
 void BulletCastBVHManager::setContactDistanceThreshold(double contact_distance)
 {
-  contact_distance_ = contact_distance;
+  contact_test_data_.contact_distance = contact_distance;
 
   for (auto& co : link2cow_)
   {
@@ -389,18 +393,20 @@ void BulletCastBVHManager::setContactDistanceThreshold(double contact_distance)
   }
 }
 
-double BulletCastBVHManager::getContactDistanceThreshold() const { return contact_distance_; }
-void BulletCastBVHManager::setIsContactAllowedFn(IsContactAllowedFn fn) { fn_ = fn; }
-IsContactAllowedFn BulletCastBVHManager::getIsContactAllowedFn() const { return fn_; }
+double BulletCastBVHManager::getContactDistanceThreshold() const { return contact_test_data_.contact_distance; }
+void BulletCastBVHManager::setIsContactAllowedFn(IsContactAllowedFn fn) { contact_test_data_.fn = fn; }
+IsContactAllowedFn BulletCastBVHManager::getIsContactAllowedFn() const { return contact_test_data_.fn; }
 void BulletCastBVHManager::contactTest(ContactResultMap& collisions, const ContactTestType& type)
 {
-  ContactTestData cdata(active_, contact_distance_, fn_, type, collisions);
+  contact_test_data_.res = &collisions;
+  contact_test_data_.type = type;
+  contact_test_data_.done = false;
 
   broadphase_->calculateOverlappingPairs(dispatcher_.get());
 
   btOverlappingPairCache* pairCache = broadphase_->getOverlappingPairCache();
 
-  CastBroadphaseContactResultCallback cc(cdata, contact_distance_);
+  CastBroadphaseContactResultCallback cc(contact_test_data_, contact_test_data_.contact_distance);
 
   TesseractCollisionPairCallback collisionCallback(dispatch_info_, dispatcher_.get(), cc);
 
@@ -409,10 +415,13 @@ void BulletCastBVHManager::contactTest(ContactResultMap& collisions, const Conta
 
 void BulletCastBVHManager::addCollisionObject(const COW::Ptr& cow)
 {
+  cow->setUserPointer(&contact_test_data_);
   link2cow_[cow->getName()] = cow;
+  collision_objects_.push_back(cow->getName());
 
   // Create cast collision object
   COW::Ptr cast_cow = makeCastCollisionObject(cow);
+  cast_cow->setUserPointer(&contact_test_data_);
 
   // Add it to the cast map
   link2castcow_[cast_cow->getName()] = cast_cow;
@@ -430,18 +439,6 @@ void BulletCastBVHManager::addCollisionObject(const COW::Ptr& cow)
                                                              selected_cow->m_collisionFilterGroup,
                                                              selected_cow->m_collisionFilterMask,
                                                              dispatcher_.get()));
-}
-
-void BulletCastBVHManager::contactTest(const COW::Ptr& cow, ContactTestData& collisions)
-{
-  btVector3 aabb_min, aabb_max;
-  cow->getAABB(aabb_min, aabb_max);
-
-  CastCollisionCollector cc(collisions, cow, static_cast<double>(cow->getContactProcessingThreshold()));
-
-  TesseractSingleContactCallback contactCB(cow.get(), dispatcher_.get(), dispatch_info_, cc);
-
-  broadphase_->aabbTest(aabb_min, aabb_max, contactCB);
 }
 }  // namespace tesseract_collision_bullet
 }  // namespace tesseract_collision
